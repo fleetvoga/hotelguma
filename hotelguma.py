@@ -8,7 +8,7 @@ import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
 
-# --- ULTRA KOMPAKTAN DIZAJN (SOCIJALNI RAZMACI ~2mm) ---
+# --- ULTRA KOMPAKTAN DIZAJN (RAZMACI ~2mm, SVE NA JEDNOM EKRANU) ---
 st.set_page_config(
     page_title="UNOS PODATAKA - HOTEL GUMA",
     page_icon="🚗",
@@ -17,39 +17,52 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-/* Uklanjanje suvišnog vrha i postavljanje minimalnih margina */
+/* Potpuno uklanjanje praznog prostora na vrhu i oko kontejnera */
 .block-container {
-    padding-top: 0.2rem !important;
-    padding-bottom: 0.2rem !important;
-    padding-left: 0.4rem !important;
-    padding-right: 0.4rem !important;
+    padding-top: 0.1rem !important;
+    padding-bottom: 0.1rem !important;
+    padding-left: 0.3rem !important;
+    padding-right: 0.3rem !important;
 }
-header {
-    visibility: hidden;
-    height: 0px;
-}
-/* Smanjenje vertikalnog razmaka između polja na 2px (~2mm) */
+header { visibility: hidden; height: 0px; }
+footer { visibility: hidden; height: 0px; }
+
+/* Fiksiranje vertikalnog razmaka između polja na tačno 2px (~2mm) */
 div.stTextInput, div.stSelectbox, div.stTextArea, div.stCheckbox {
     margin-bottom: 2px !important;
+    margin-top: 0px !important;
 }
-/* Smanjenje visine polja i veličine slova unutra */
+div.element-container {
+    margin-bottom: 2px !important;
+}
+
+/* Agresivno smanjenje visine input polja i unutrašnjeg teksta */
 input, select, textarea {
     font-size: 10px !important;
-    padding: 1px 4px !important;
-    min-height: 20px !important;
-    height: 20px !important;
+    padding: 0px 3px !important;
+    min-height: 18px !important;
+    height: 18px !important;
 }
 div.stTextInput > div > div > input {
-    height: 20px !important;
-    min-height: 20px !important;
+    height: 18px !important;
+    min-height: 18px !important;
 }
 div.stSelectbox > div > div > div {
-    min-height: 20px !important;
+    min-height: 18px !important;
+    height: 18px !important;
     padding: 0px 2px !important;
 }
+div.stTextArea textarea {
+    height: 32px !important;
+    min-height: 32px !important;
+}
+
 .stForm {
     border: none;
     padding: 0px;
+}
+[data-testid="column"] {
+    padding: 0px 2px !important;
 }
 div.stButton > button {
     font-weight: bold;
@@ -318,11 +331,11 @@ with st.form("compact_form"):
             zima22f = st.text_input("z22f", value=saved_prices.get("zima20do22Felna", "1450"), label_visibility="collapsed")
             zima23f = st.text_input("z23f", value=saved_prices.get("zimaPreko22Felna", "1550"), label_visibility="collapsed")
             leto19f = st.text_input("l19f", value=saved_prices.get("letoDo19Felna", "1650"), label_visibility="collapsed")
-            leto22f = st.text_input("l22f", value=saved_prices.get("l20do22Felna", "1930"), label_visibility="collapsed")
+            leto22f = st.text_input("l22f", value=saved_prices.get("leto20do22Felna", "1930"), label_visibility="collapsed")
             leto23f = st.text_input("l23f", value=saved_prices.get("letoPreko22Felna", "2070"), label_visibility="collapsed")
 
         st.markdown("**Napomena**")
-        napomena_izlaska = st.text_area("Napomena", value=get_val("napomenaIzlaska", ""), label_visibility="collapsed", placeholder="Napomena...", height=32)
+        napomena_izlaska = st.text_area("Napomena", value=get_val("napomenaIzlaska", ""), label_visibility="collapsed", placeholder="Napomena...", height=28)
         
         plac_val = get_val("placeno", "Ne")
         placeno = st.checkbox("Plaćeno", value=True if str(plac_val).casefold() in ["da", "yes", "true", "1"] else False)
