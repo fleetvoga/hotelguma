@@ -8,7 +8,7 @@ import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
 
-# --- MAKSIMALNO KOMPAKTAN DIZAJN I SMANJENI RAZMACI ---
+# --- DIZAJN I UKLANJANJE SUVIŠNOG PROSTORA NA VRHU ---
 st.set_page_config(
     page_title="UNOS PODATAKA - HOTEL GUMA",
     page_icon="🚗",
@@ -17,34 +17,42 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-/* Smanjenje razmaka između elemenata i kontejnera */
-.element-container {
-    margin-bottom: -14px !important;
+/* Uklanjanje velikog praznog prostora na vrhu Streamlit stranice */
+.block-container {
+    padding-top: 1.0rem !important;
+    padding-bottom: 0.5rem;
+    padding-left: 0.8rem;
+    padding-right: 0.8rem;
 }
+header {
+    visibility: hidden;
+    height: 0px;
+}
+/* Kontrolisani razmak od 2-3mm između polja */
 div.stTextInput, div.stSelectbox, div.stTextArea {
-    margin-bottom: -10px !important;
+    margin-bottom: 3px !important;
 }
-/* Smanjenje visine i paddinga u input poljima */
+input, select, textarea {
+    font-size: 11px !important;
+    padding: 2px 6px !important;
+    min-height: 24px !important;
+}
 div.stTextInput > div > div > input {
-    height: 22px !important;
-    min-height: 22px !important;
-    padding: 0px 4px !important;
-    font-size: 11px !important;
+    height: 26px !important;
 }
-/* Smanjenje visine za selectbox (sezona) */
 div.stSelectbox > div > div > div {
-    min-height: 22px !important;
-    padding: 0px 2px !important;
-    font-size: 11px !important;
+    min-height: 26px !important;
+    padding: 0px 4px !important;
 }
-/* Smanjenje razmaka u kolonama */
-[data-testid="column"] {
-    padding: 0px 2px !important;
-}
-/* Uklanjanje suvišnih margina forme */
 .stForm {
     border: none;
     padding: 0px;
+}
+div.stButton > button {
+    font-weight: bold;
+    padding: 0.2rem 0.6rem;
+    font-size: 12px;
+    min-height: 26px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -109,10 +117,27 @@ def calculate_storage_cost(row, current_form_rates=None):
         is_zima = "zima" in sezona or "zimsk" in sezona
 
         if is_zima:
-            price = get_price("zimaDo19Felna" if is_felna else "zimaDo19", 1250.0 if is_felna else 1000.0)
+            if inch <= 19:
+                base_f, feln_f = "zimaDo19", "zimaDo19Felna"
+                def_b, def_fb = 1000.0, 1250.0
+            elif inch <= 22:
+                base_f, feln_f = "zima20do22", "zima20do22Felna"
+                def_b, def_fb = 1200.0, 1450.0
+            else:
+                base_f, feln_f = "zimaPreko22", "zimaPreko22Felna"
+                def_b, def_fb = 1300.0, 1550.0
         else:
-            price = get_price("letoDo19Felna" if is_felna else "letoDo19", 1650.0 if is_felna else 1400.0)
-        total_cost += price
+            if inch <= 19:
+                base_f, feln_f = "letoDo19", "letoDo19Felna"
+                def_b, def_fb = 1400.0, 1650.0
+            elif inch <= 22:
+                base_f, feln_f = "leto20do22", "leto20do22Felna"
+                def_b, def_fb = 1680.0, 1930.0
+            else:
+                base_f, feln_f = "letoPreko22", "letoPreko22Felna"
+                def_b, def_fb = 1820.0, 2070.0
+
+        total_cost += get_price(feln_f, def_fb) if is_felna else get_price(base_f, def_b)
 
     return {"total": total_cost.quantize(Decimal("0.01"))}
 
@@ -185,7 +210,15 @@ def get_saved_records():
         return []
 
 def load_prices_from_cloud():
-    default = {"zimaDo19": "1000", "zimaDo19Felna": "1250", "letoDo19": "1400", "letoDo19Felna": "1650", "datumIzmene": "Danas"}
+    default = {
+        "zimaDo19": "1000.00", "zimaDo19Felna": "1250.00",
+        "zima20do22": "1200.00", "zima20do22Felna": "1450.00",
+        "zimaPreko22": "1300.00", "zimaPreko22Felna": "1550.00",
+        "letoDo19": "1400.00", "letoDo19Felna": "1650.00",
+        "leto20do22": "1680.00", "leto20do22Felna": "1930.00",
+        "letoPreko22": "1820.00", "letoPreko22Felna": "2070.00",
+        "datumIzmene": "Danas"
+    }
     try:
         ws = get_worksheet(PRICES_WORKSHEET_NAME)
         if ws:
@@ -221,7 +254,7 @@ def get_val(key, default=""):
     return st.session_state.form_data.get(key, default)
 
 with st.form("compact_form"):
-    c_osn, c_pl, c_pd, c_zl, c_zd, c_cen = st.columns([2.1, 1.9, 1.9, 1.9, 1.9, 2.0], gap="small")
+    c_osn, c_pl, c_pd, c_zl, c_zd, c_cen = st.columns([2.1, 1.9, 1.9, 1.9, 1.9, 2.3], gap="small")
 
     with c_osn:
         st.markdown("**Osnovni podaci**")
@@ -267,13 +300,28 @@ with st.form("compact_form"):
         zd_dim, zd_mar, zd_mod, zd_sez, zd_dot, zd_sar, zd_fel, zd_nap, zd_lok = compact_tire_inputs("Zadnja desna", "zadnjaDesna")
 
     with c_cen:
-        st.markdown("**Cenovnik**")
-        zima19 = st.text_input("Z19", value=saved_prices.get("zimaDo19", "1000"), label_visibility="collapsed")
-        zima19f = st.text_input("Z19f", value=saved_prices.get("zimaDo19Felna", "1250"), label_visibility="collapsed")
-        leto19 = st.text_input("L19", value=saved_prices.get("letoDo19", "1400"), label_visibility="collapsed")
-        leto19f = st.text_input("L19f", value=saved_prices.get("letoDo19Felna", "1650"), label_visibility="collapsed")
-        
-        napomena_izlaska = st.text_area("Opšta napomena", value=get_val("napomenaIzlaska", ""), label_visibility="collapsed", placeholder="Napomena...", height=48)
+        st.markdown("**Cenovnik čuvanja**")
+        # Prikaz kao u hotel_guma_2.py: Zima / Leto sa po dva polja (Bez f. / Sa f.)
+        cc1, cc2 = st.columns(2)
+        with cc1:
+            st.caption("Bez f.")
+            zima19 = st.text_input("z19b", value=saved_prices.get("zimaDo19", "1000"), label_visibility="collapsed")
+            zima22 = st.text_input("z22b", value=saved_prices.get("zima20do22", "1200"), label_visibility="collapsed")
+            zima23 = st.text_input("z23b", value=saved_prices.get("zimaPreko22", "1300"), label_visibility="collapsed")
+            leto19 = st.text_input("l19b", value=saved_prices.get("letoDo19", "1400"), label_visibility="collapsed")
+            leto22 = st.text_input("l22b", value=saved_prices.get("leto20do22", "1680"), label_visibility="collapsed")
+            leto23 = st.text_input("l23b", value=saved_prices.get("letoPreko22", "1820"), label_visibility="collapsed")
+        with cc2:
+            st.caption("Sa f.")
+            zima19f = st.text_input("z19f", value=saved_prices.get("zimaDo19Felna", "1250"), label_visibility="collapsed")
+            zima22f = st.text_input("z22f", value=saved_prices.get("zima20do22Felna", "1450"), label_visibility="collapsed")
+            zima23f = st.text_input("z23f", value=saved_prices.get("zimaPreko22Felna", "1550"), label_visibility="collapsed")
+            leto19f = st.text_input("l19f", value=saved_prices.get("letoDo19Felna", "1650"), label_visibility="collapsed")
+            leto22f = st.text_input("l22f", value=saved_prices.get("leto20do22Felna", "1930"), label_visibility="collapsed")
+            leto23f = st.text_input("l23f", value=saved_prices.get("letoPreko22Felna", "2070"), label_visibility="collapsed")
+
+        st.markdown("**Napomena**")
+        napomena_izlaska = st.text_area("Napomena", value=get_val("napomenaIzlaska", ""), label_visibility="collapsed", placeholder="Napomena...", height=42)
         
         plac_val = get_val("placeno", "Ne")
         placeno = st.checkbox("Plaćeno", value=True if str(plac_val).casefold() in ["da", "yes", "true", "1"] else False)
@@ -303,8 +351,10 @@ with st.form("compact_form"):
             "prednjaDesnaDimenzija": pd_dim, "prednjaDesnaMarka": pd_mar, "prednjaDesnaModel": pd_mod, "prednjaDesnaSezona": pd_sez, "prednjaDesnaDOT": pd_dot, "prednjaDesnaFelna": "Da" if pd_fel else "Ne", "prednjaDesnaNapomena": pd_nap, "prednjaDesnaDubinaSare": pd_sar, "prednjaDesnaLokacija": pd_lok,
             "zadnjaLevaDimenzija": zl_dim, "zadnjaLevaMarka": zl_mar, "zadnjaLevaModel": zl_mod, "zadnjaLevaSezona": zl_sez, "zadnjaLevaDOT": zl_dot, "zadnjaLevaFelna": "Da" if zl_fel else "Ne", "zadnjaLevaNapomena": zl_nap, "zadnjaLevaDubinaSare": zl_sar, "zadnjaLevaLokacija": zl_lok,
             "zadnjaDesnaDimenzija": zd_dim, "zadnjaDesnaMarka": zd_mar, "zadnjaDesnaModel": zd_mod, "zadnjaDesnaSezona": zd_sez, "zadnjaDesnaDOT": zd_dot, "zadnjaDesnaFelna": "Da" if zd_fel else "Ne", "zadnjaDesnaNapomena": zd_nap, "zadnjaDesnaDubinaSare": zd_sar, "zadnjaDesnaLokacija": zd_lok,
+            "zimaDo19": zima19, "zimaDo19Felna": zima19f, "zima20do22": zima22, "zima20do22Felna": zima22f,
+            "zimaPreko22": zima23, "zimaPreko22Felna": zima23f, "letoDo19": leto19, "letoDo19Felna": leto19f,
+            "leto20do22": leto22, "leto20do22Felna": leto22f, "letoPreko22": leto23, "letoPreko22Felna": leto23f
         }
-        data_dict.update(saved_prices)
         for i, fn in enumerate(FIELD_ORDER):
             row_vals[i] = data_dict.get(fn, "")
         try:
@@ -323,11 +373,12 @@ with st.form("compact_form"):
 st.markdown("### Pregled unosa")
 if records:
     t_rows = []
+    prices_to_calc = load_prices_from_cloud()
     for r_num, row in records:
         r_dict = dict(zip(FIELD_ORDER, row))
         if search_query and not any(search_query.casefold() in str(v).casefold() for v in row):
             continue
-        calc = calculate_storage_cost(row, current_form_rates=saved_prices)
+        calc = calculate_storage_cost(row, current_form_rates=prices_to_calc)
         t_rows.append({
             "Red": r_num,
             "ID": r_dict.get("id"), "R.br": r_dict.get("redniBroj"), "Plaćeno": r_dict.get("placeno"),
