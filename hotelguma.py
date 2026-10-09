@@ -17,36 +17,34 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-.block-container {
-    padding-top: 0.4rem;
-    padding-bottom: 0.4rem;
-    padding-left: 0.6rem;
-    padding-right: 0.6rem;
+/* Smanjenje razmaka između elemenata i kontejnera */
+.element-container {
+    margin-bottom: -14px !important;
 }
-input, select, textarea {
-    font-size: 11px !important;
-    padding: 2px 6px !important;
-    min-height: 24px !important;
+div.stTextInput, div.stSelectbox, div.stTextArea {
+    margin-bottom: -10px !important;
 }
+/* Smanjenje visine i paddinga u input poljima */
 div.stTextInput > div > div > input {
-    height: 28px !important;
-}
-div.stSelectbox > div > div > div {
-    min-height: 28px !important;
+    height: 22px !important;
+    min-height: 22px !important;
     padding: 0px 4px !important;
+    font-size: 11px !important;
 }
-div.row-widget.stHorizontal {
-    margin-bottom: -10px;
+/* Smanjenje visine za selectbox (sezona) */
+div.stSelectbox > div > div > div {
+    min-height: 22px !important;
+    padding: 0px 2px !important;
+    font-size: 11px !important;
 }
+/* Smanjenje razmaka u kolonama */
+[data-testid="column"] {
+    padding: 0px 2px !important;
+}
+/* Uklanjanje suvišnih margina forme */
 .stForm {
     border: none;
     padding: 0px;
-}
-div.stButton > button {
-    font-weight: bold;
-    padding: 0.1rem 0.5rem;
-    font-size: 12px;
-    min-height: 26px;
 }
 </style>
 """, unsafe_allow_html=True)
