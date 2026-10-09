@@ -288,3 +288,4 @@ if records:
     st.dataframe(t_rows, use_container_width=True)
 else:
     st.info("Nema sačuvanih unosa.")
+    
