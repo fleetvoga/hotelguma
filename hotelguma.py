@@ -17,7 +17,6 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-/* Potpuno uklanjanje praznog prostora na vrhu i oko kontejnera */
 .block-container {
     padding-top: 0.1rem !important;
     padding-bottom: 0.1rem !important;
@@ -27,7 +26,6 @@ st.markdown("""
 header { visibility: hidden; height: 0px; }
 footer { visibility: hidden; height: 0px; }
 
-/* Fiksiranje vertikalnog razmaka između polja na tačno 2px (~2mm) */
 div.stTextInput, div.stSelectbox, div.stTextArea, div.stCheckbox {
     margin-bottom: 2px !important;
     margin-top: 0px !important;
@@ -36,25 +34,28 @@ div.element-container {
     margin-bottom: 2px !important;
 }
 
-/* Agresivno smanjenje visine input polja i unutrašnjeg teksta */
+/* Povećan font i polja podešena na 80% (4/5) širine kolone */
 input, select, textarea {
-    font-size: 10px !important;
-    padding: 0px 3px !important;
-    min-height: 18px !important;
-    height: 18px !important;
+    font-size: 13px !important;
+    padding: 2px 5px !important;
+    min-height: 22px !important;
+    height: 22px !important;
 }
 div.stTextInput > div > div > input {
-    height: 18px !important;
-    min-height: 18px !important;
+    width: 80% !important;
+    height: 22px !important;
+    min-height: 22px !important;
 }
 div.stSelectbox > div > div > div {
-    min-height: 18px !important;
-    height: 18px !important;
+    width: 80% !important;
+    min-height: 22px !important;
+    height: 22px !important;
     padding: 0px 2px !important;
 }
 div.stTextArea textarea {
-    height: 32px !important;
-    min-height: 32px !important;
+    width: 80% !important;
+    height: 36px !important;
+    min-height: 36px !important;
 }
 
 .stForm {
