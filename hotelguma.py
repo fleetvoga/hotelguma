@@ -23,7 +23,6 @@ st.markdown("""
     padding-left: 0.6rem;
     padding-right: 0.6rem;
 }
-/* Smanjivanje visine input polja i unutrašnjih margina */
 input, select, textarea {
     font-size: 11px !important;
     padding: 2px 6px !important;
@@ -36,7 +35,6 @@ div.stSelectbox > div > div > div {
     min-height: 28px !important;
     padding: 0px 4px !important;
 }
-/* Smanjivanje vertikalnog razmaka između elemenata u formi */
 div.row-widget.stHorizontal {
     margin-bottom: -10px;
 }
@@ -212,7 +210,6 @@ def update_sheet_row(row_num, row_values):
     row_values[FIELD_ORDER.index("id")] = row_num
     ws.update(range_name=f"A{row_num}:{sheet_column_name(len(FIELD_ORDER))}{row_num}", values=[row_values], value_input_option="RAW")
 
-# --- STANJE SESIJE ZA UREĐIVANJE (EDIT) ---
 if "edit_row_num" not in st.session_state:
     st.session_state.edit_row_num = None
 if "form_data" not in st.session_state:
@@ -284,12 +281,12 @@ with st.form("compact_form"):
         placeno = st.checkbox("Plaćeno", value=True if str(plac_val).casefold() in ["da", "yes", "true", "1"] else False)
 
     st.markdown("---")
-    b1, b2, b3, b4 = st.columns([1, 1, 1.5, 3])
+    b1, b2, b3 = st.columns([1, 1, 3])
     with b1:
         submit_btn = st.form_submit_button("Sačuvaj izmene" if st.session_state.edit_row_num else "Sačuvaj")
     with b2:
         clear_btn = st.form_submit_button("Nova forma")
-    with b4:
+    with b3:
         search_query = st.text_input("Pretraga", label_visibility="collapsed", placeholder="Pretraži unose...")
 
     if clear_btn:
@@ -307,7 +304,7 @@ with st.form("compact_form"):
             "prednjaLevaDimenzija": pl_dim, "prednjaLevaMarka": pl_mar, "prednjaLevaModel": pl_mod, "prednjaLevaSezona": pl_sez, "prednjaLevaDOT": pl_dot, "prednjaLevaFelna": "Da" if pl_fel else "Ne", "prednjaLevaNapomena": pl_nap, "prednjaLevaDubinaSare": pl_sar, "prednjaLevaLokacija": pl_lok,
             "prednjaDesnaDimenzija": pd_dim, "prednjaDesnaMarka": pd_mar, "prednjaDesnaModel": pd_mod, "prednjaDesnaSezona": pd_sez, "prednjaDesnaDOT": pd_dot, "prednjaDesnaFelna": "Da" if pd_fel else "Ne", "prednjaDesnaNapomena": pd_nap, "prednjaDesnaDubinaSare": pd_sar, "prednjaDesnaLokacija": pd_lok,
             "zadnjaLevaDimenzija": zl_dim, "zadnjaLevaMarka": zl_mar, "zadnjaLevaModel": zl_mod, "zadnjaLevaSezona": zl_sez, "zadnjaLevaDOT": zl_dot, "zadnjaLevaFelna": "Da" if zl_fel else "Ne", "zadnjaLevaNapomena": zl_nap, "zadnjaLevaDubinaSare": zl_sar, "zadnjaLevaLokacija": zl_lok,
-            "zadnjaDesnaDimenzija": zd_dim, "zadnjaDesnaMarka": zd_mar, "zadnjaDesnaModel": zd_mod, "zadnjaDesnaSezona": zd_sez, "zadnjaDesnaDOT": zd_dot, "zadnjaDesnaFelna": "Da" if zd_felna else "Ne", "zadnjaDesnaNapomena": zd_nap, "zadnjaDesnaDubinaSare": zd_sar, "zadnjaDesnaLokacija": zd_lok,
+            "zadnjaDesnaDimenzija": zd_dim, "zadnjaDesnaMarka": zd_mar, "zadnjaDesnaModel": zd_mod, "zadnjaDesnaSezona": zd_sez, "zadnjaDesnaDOT": zd_dot, "zadnjaDesnaFelna": "Da" if zd_fel else "Ne", "zadnjaDesnaNapomena": zd_nap, "zadnjaDesnaDubinaSare": zd_sar, "zadnjaDesnaLokacija": zd_lok,
         }
         data_dict.update(saved_prices)
         for i, fn in enumerate(FIELD_ORDER):
@@ -325,8 +322,7 @@ with st.form("compact_form"):
         except Exception as e:
             st.error(f"Greška: {e}")
 
-# --- PREGLED UNOSA SA MOGUĆNOšću UČITAVANJA ZA IZMENU ---
-st.markdown("### Pregled unosa (kliknite na dugme 'Izmeni' za učitavanje u formu)")
+st.markdown("### Pregled unosa")
 if records:
     t_rows = []
     for r_num, row in records:
@@ -349,7 +345,6 @@ if records:
             st.text(f"ID: {item['ID']} | R.br: {item['R.br']} | Korisnik: {item['Korisnik']} | Tablice: {item['Tablice']} | Vozilo: {item['Vozilo']} | Plaćeno: {item['Plaćeno']} | Obračun: {item['Obračun RSD']}")
         with col_btn:
             if st.button("Izmeni", key=f"edit_{item['Red']}"):
-                # Pronađi originalni red i upisi u session_state
                 target_row = next(r for rn, r in records if rn == item['Red'])
                 st.session_state.edit_row_num = item['Red']
                 st.session_state.form_data = dict(zip(FIELD_ORDER, target_row))
