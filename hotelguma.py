@@ -3,7 +3,6 @@ import json
 import re
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
-from pathlib import Path
 
 import streamlit as st
 import gspread
@@ -11,7 +10,7 @@ from google.oauth2.service_account import Credentials
 
 # --- KONFIGURACIJA STRANICE ---
 st.set_page_config(
-    page_title="Hotel Guma - Upravljanje i Čuvanje Pneumatika",
+    page_title="Hotel Guma - Web Aplikacija",
     page_icon="🚗",
     layout="wide"
 )
@@ -176,13 +175,21 @@ def sheet_column_name(column_number):
 
 @st.cache_resource
 def get_gspread_client():
-    if "gcp_service_account" in st.secrets:
-        creds_dict = dict(st.secrets["gcp_service_account"])
-        scope = [
-            "https://www.googleapis.com/auth/spreadsheets",
-            "https://www.googleapis.com/auth/drive",
-        ]
-        creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
+    scope = [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive",
+    ]
+    try:
+        if "gcp_service_account" in st.secrets:
+            creds_dict = dict(st.secrets["gcp_service_account"])
+            creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
+            return gspread.authorize(creds)
+    except Exception:
+        pass
+
+    local_json_file = "my-project-app-508706-9e92b577fcb8.json"
+    if os.path.exists(local_json_file):
+        creds = Credentials.from_service_account_file(local_json_file, scopes=scope)
         return gspread.authorize(creds)
     return None
 
@@ -276,154 +283,18 @@ def append_row_to_sheet(row_values):
     )
     return row_number
 
-def update_sheet_row(row_number, row_values):
-    ws = ensure_sheet_headers()
-    if not ws:
-        raise Exception("Nema konekcije sa Google Sheet-om.")
-    last_column = sheet_column_name(len(FIELD_ORDER))
-    row_values = list(row_values)
-    row_values[FIELD_ORDER.index("id")] = row_number
-    ws.update(
-        range_name=f"A{row_number}:{last_column}{row_number}",
-        values=[row_values],
-        value_input_option="RAW",
-    )
-
-# --- HTML GENERATOR ZA ŠTAMPU (NALEPNICE I POTVRDE) ---
-def html_escape(val):
-    return str(val or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-
-def build_sticker_page(record):
-    r_dict = dict(zip(FIELD_ORDER, record))
-    positions = [
-        ("PREDNJA LEVA", "prednjaLeva"),
-        ("PREDNJA DESNA", "prednjaDesna"),
-        ("ZADNJA LEVA", "zadnjaLeva"),
-        ("ZADNJA DESNA", "zadnjaDesna"),
-    ]
-    stickers = []
-    for title, prefix in positions:
-        details = [
-            ("Dimenzija", f"{prefix}Dimenzija"),
-            ("Marka pneumatika", f"{prefix}Marka"),
-            ("Model pneumatika", f"{prefix}Model"),
-            ("Sezona", f"{prefix}Sezona"),
-            ("DOT", f"{prefix}DOT"),
-            ("Dubina šare (mm)", f"{prefix}DubinaSare"),
-            ("Felna", f"{prefix}Felna"),
-            ("Napomena", f"{prefix}Napomena"),
-            ("Lokacija", f"{prefix}Lokacija"),
-        ]
-        tire_details = "".join(
-            f'<div class="detail"><span>{html_escape(label)}</span>'
-            f'<strong>{html_escape(r_dict.get(field))}</strong></div>'
-            for label, field in details
-        )
-        stickers.append(
-            f'<section class="sticker"><div class="sticker-head">'
-            f'<div><div class="position">{title}</div>'
-            f'<div class="plate">{html_escape(r_dict.get("brojTablica")) or "-"}</div>'
-            f'<div class="customer-name">{html_escape(r_dict.get("korisnik")) or "-"}</div>'
-            f'<div class="owner-caption">KORISNIK</div></div></div>'
-            f'<div class="vehicle">VOZILO: <b>{html_escape(r_dict.get("markaVozila"))} {html_escape(r_dict.get("modelVozila"))}</b></div>'
-            f'<div class="customer"><strong>KORISNIK:</strong> <b>{html_escape(r_dict.get("korisnik"))}</b> '
-            f'<span>{html_escape(r_dict.get("telefonKorisnika"))}</span><br>'
-            f'<strong>ADRESA:</strong> {html_escape(r_dict.get("adresaKorisnika"))}</div>'
-            f'<div class="date">DATUM PRIJEMA: {html_escape(r_dict.get("datum"))}</div>'
-            f'<div class="tire-details">{tire_details}</div></section>'
-        )
-
-    return f"""<!doctype html>
-<html lang="sr"><head><meta charset="utf-8"><title>Nalepnice za pneumatike</title>
-<style>
-@page {{ size: A4 portrait; margin: 0; }}
-* {{ box-sizing: border-box; }}
-body {{ margin: 0; padding: 0; font-family: Arial, sans-serif; font-size: 11pt; }}
-.page {{ width: 210mm; height: 297mm; display: grid; grid-template-columns: 105mm 105mm; grid-template-rows: 148.5mm 148.5mm; page-break-after: always; }}
-.sticker {{ border: 1px dashed #56636d; padding: 8mm; display: flex; flex-direction: column; gap: 2.5mm; background: #fff; }}
-.position {{ font-size: 16pt; font-weight: 900; color: #c0392b; }}
-.plate {{ margin-top: 2mm; font-size: 22pt; font-weight: 900; color: #1b5e20; }}
-.customer-name {{ font-size: 16pt; font-weight: 900; color: #1b5e20; }}
-.owner-caption {{ font-size: 8pt; font-weight: bold; }}
-.vehicle {{ border-top: 1px solid #68737c; padding-top: 2.5mm; font-size: 11pt; font-weight: bold; color: #0d47a1; }}
-.customer {{ font-size: 10pt; line-height: 1.35; }}
-.date {{ font-size: 10pt; font-weight: bold; }}
-.tire-details {{ margin-top: 1mm; display: grid; grid-template-columns: 1fr 1fr; gap: 2mm 4mm; }}
-.detail {{ border-bottom: 1px solid #d4dade; padding-bottom: 1.2mm; min-height: 9mm; }}
-.detail span {{ display: block; color: #0f3d0f; font-size: 8pt; text-transform: uppercase; font-weight: bold; }}
-.detail strong {{ display: block; font-size: 11.5pt; font-weight: bold; }}
-</style></head><body><main class="page">{''.join(stickers)}</main>
-<script>window.addEventListener('load', () => setTimeout(() => window.print(), 350));</script>
-</body></html>"""
-
-
-# --- GLAVNI INTERFEJS APLIKACIJE ---
+# --- INTERFEJS APLIKACIJE ---
 st.title("🚗 Hotel Guma - Upravljanje i Čuvanje Pneumatika")
 
-# Navigacija preko sidebar-a
-menu = st.sidebar.selectbox("Glavni meni", ["Pregled i pretraga unosa", "Novi unos / Izmena", "Cenovnik čuvanja", "Štampa dokumenta"])
-
-records = get_saved_records()
 saved_prices = load_prices_from_cloud()
+records = get_saved_records()
 
-if menu == "Pregled i pretraga unosa":
-    st.subheader("Pregled sačuvanih unosa u Google Sheet-u")
-    
-    search_query = st.text_input("🔍 Pretraga (unesite tablice, korisnika, marku vozila...):", "")
-    
-    if records:
-        table_rows = []
-        paid_count = 0
-        unpaid_count = 0
-        total_tires = 0
-        
-        for row_num, row in records:
-            r_dict = dict(zip(FIELD_ORDER, row))
-            if search_query and not any(search_query.casefold() in str(v).casefold() for v in row):
-                continue
-                
-            calc = calculate_storage_cost(row, current_form_rates=saved_prices)
-            is_paid = (r_dict.get("placeno") or "").strip().casefold() in ("da", "yes", "true", "1")
-            
-            if is_paid:
-                paid_count += 1
-            else:
-                unpaid_count += 1
-                
-            for dim_f in ["prednjaLevaDimenzija", "prednjaDesnaDimenzija", "zadnjaLevaDimenzija", "zadnjaDesnaDimenzija"]:
-                if (r_dict.get(dim_f) or "").strip():
-                    total_tires += 1
-                    
-            table_rows.append({
-                "Redni broj": r_dict.get("redniBroj"),
-                "Plaćeno": "Da" if is_paid else "Ne",
-                "Datum": r_dict.get("datum"),
-                "Korisnik": r_dict.get("korisnik"),
-                "Telefon": r_dict.get("telefonKorisnika"),
-                "Tablice": r_dict.get("brojTablica"),
-                "Vozilo": f"{r_dict.get('markaVozila')} {r_dict.get('modelVozila')}",
-                "Obračun (RSD)": f"{calc['total']:.2f}"
-            })
-            
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Ukupno unosa", len(table_rows))
-        c2.metric("Plaćenih", paid_count)
-        c3.metric("Neplaćenih", unpaid_count)
-        c4.metric("Aktivnih guma", total_tires)
-        
-        st.divider()
-        if table_rows:
-            st.dataframe(table_rows, use_container_width=True)
-        else:
-            st.info("Nema unosa koji odgovaraju zadatom pojmu za pretragu.")
-    else:
-        st.warning("Nema učitanih unosa iz Google tabele ili tabela nije dostupna.")
+tab1, tab2, tab3 = st.tabs(["Unos i Izmena", "Cenovnik", "Pregled unosa"])
 
-elif menu == "Novi unos / Izmena":
-    st.subheader("Unos novog klijenta u hotel guma")
+with tab1:
+    st.subheader("Glavna forma za prijem pneumatika")
     
-    with st.form("hotel_main_form"):
-        st.markdown("### 📋 Osnovni podaci o klijentu i vozilu")
+    with st.form("hotel_form"):
         col1, col2, col3 = st.columns(3)
         with col1:
             korisnik = st.text_input("Korisnik")
@@ -440,38 +311,37 @@ elif menu == "Novi unos / Izmena":
             placeno = st.checkbox("Plaćeno")
 
         st.divider()
-        st.markdown("### 🛞 Detalji pneumatika po pozicijama")
-        
-        positions_meta = [
+        st.markdown("### Pozicije pneumatika (Dimenzije, Marka, Model, Sezona, DOT, Šara, Felna, Lokacija)")
+
+        positions = [
             ("Prednja leva", "prednjaLeva"),
             ("Prednja desna", "prednjaDesna"),
             ("Zadnja leva", "zadnjaLeva"),
             ("Zadnja desna", "zadnjaDesna"),
         ]
-        
+
         form_data = {}
-        for title, prefix in positions_meta:
+        for title, prefix in positions:
             st.markdown(f"**{title}**")
-            fc1, fc2, fc3, fc4, fc5, fc6, fc7, fc8 = st.columns(8)
-            form_data[f"{prefix}Dimenzija"] = fc1.text_input(f"Dimenzija ({prefix})", placeholder="225/60R17")
-            form_data[f"{prefix}Marka"] = fc2.text_input(f"Marka ({prefix})")
-            form_data[f"{prefix}Model"] = fc3.text_input(f"Model ({prefix})")
-            form_data[f"{prefix}Sezona"] = fc4.selectbox(f"Sezona ({prefix})", ["", "ZIMSKA", "LETNJA", "ALLSEASON"])
-            form_data[f"{prefix}DOT"] = fc5.text_input(f"DOT ({prefix})")
-            form_data[f"{prefix}DubinaSare"] = fc6.text_input(f"Šara mm ({prefix})")
-            form_data[f"{prefix}Felna"] = fc7.checkbox(f"Felna ({prefix})")
-            form_data[f"{prefix}Lokacija"] = fc8.text_input(f"Lokacija ({prefix})")
+            c1, c2, c3, c4, c5, c6, c7, c8 = st.columns(8)
+            form_data[f"{prefix}Dimenzija"] = c1.text_input(f"Dim. ({prefix})", placeholder="225/55R17")
+            form_data[f"{prefix}Marka"] = c2.text_input(f"Marka ({prefix})")
+            form_data[f"{prefix}Model"] = c3.text_input(f"Model ({prefix})")
+            form_data[f"{prefix}Sezona"] = c4.selectbox(f"Sezona ({prefix})", ["", "ZIMSKA", "LETNJA", "ALLSEASON"])
+            form_data[f"{prefix}DOT"] = c5.text_input(f"DOT ({prefix})")
+            form_data[f"{prefix}DubinaSare"] = c6.text_input(f"Šara mm ({prefix})")
+            form_data[f"{prefix}Felna"] = c7.checkbox(f"Felna ({prefix})")
+            form_data[f"{prefix}Lokacija"] = c8.text_input(f"Lokacija ({prefix})")
             form_data[f"{prefix}Napomena"] = st.text_input(f"Napomena ({prefix})")
 
         st.divider()
-        napomena_izlaska = st.text_area("Opšta napomena / Napomena izlaska")
+        napomena_izlaska = st.text_area("Napomena izlaska / Opšta napomena")
 
-        submitted = st.form_submit_button("Sačuvaj podatke u Google Sheet")
+        submitted = st.form_submit_button("Spremi podatke u Google Sheet")
         if submitted:
-            # Priprema niza podataka prema FIELD_ORDER
             new_row = [""] * len(FIELD_ORDER)
             r_dict = {
-                "redniBroj": "1", # Automatski ili izračunat redni broj
+                "redniBroj": "1",
                 "placeno": "Da" if placeno else "Ne",
                 "datum": datum_prijema,
                 "korisnik": korisnik,
@@ -485,8 +355,6 @@ elif menu == "Novi unos / Izmena":
                 "napomenaIzlaska": napomena_izlaska,
             }
             r_dict.update(form_data)
-            
-            # Ubacivanje aktuelnih cena u red zbog istorije obračuna
             r_dict.update(saved_prices)
 
             for i, f_name in enumerate(FIELD_ORDER):
@@ -494,13 +362,12 @@ elif menu == "Novi unos / Izmena":
 
             try:
                 append_row_to_sheet(new_row)
-                st.success("Uspešno sačuvano u Google Sheet tabelu!")
+                st.success("Podaci su uspješno spremljeni!")
             except Exception as e:
-                st.error(f"Greška pri upisu u tabelu: {e}")
+                st.error(f"Greška pri spremanju: {e}")
 
-elif menu == "Cenovnik čuvanja":
-    st.subheader("Upravljanje cenovnikom skladištenja")
-    
+with tab2:
+    st.subheader("Cenovnik skladištenja")
     with st.form("price_form"):
         col1, col2 = st.columns(2)
         new_prices = dict(saved_prices)
@@ -520,24 +387,33 @@ elif menu == "Cenovnik čuvanja":
             with col2:
                 new_prices[f_name] = st.text_input(f"{lbl} (Sa felnom)", value=saved_prices.get(f_name, ""))
                 
-        price_submitted = st.form_submit_button("Ažuriraj cenovnik")
-        if price_submitted:
-            try:
-                save_prices_to_cloud(new_prices)
-                st.success("Cenovnik je uspešno sačuvan na oblaku!")
-            except Exception as e:
-                st.error(f"Greška pri čuvanju cenovnika: {e}")
+        if st.form_submit_button("Ažuriraj cenovnik"):
+            save_prices_to_cloud(new_prices)
+            st.success("Cenovnik je uspješno ažuriran na cloudu!")
 
-elif menu == "Štampa dokumenta":
-    st.subheader("Štampa nalepnica za pneumatike")
+with tab3:
+    st.subheader("Pregled i pretraga unosa")
+    search_query = st.text_input("Pretraži po tablicama, korisniku ili vozilu:")
+    
     if records:
-        record_options = {f"Redni br: {row[1][FIELD_ORDER.index('redniBroj')]} | Tablice: {row[1][FIELD_ORDER.index('brojTablica')]} | Korisnik: {row[1][FIELD_ORDER.index('korisnik')]}": row[1] for row in records}
-        selected_choice = st.selectbox("Izaberite klijenta za štampu:", list(record_options.keys()))
-        
-        if selected_choice:
-            chosen_row = record_options[selected_choice]
-            html_doc = build_sticker_page(chosen_row)
-            st.markdown("### Pregled nalepnica (HTML)")
-            st.components.v1.html(html_doc, height=600, scrolling=True)
+        table_data = []
+        for row_num, row in records:
+            r_dict = dict(zip(FIELD_ORDER, row))
+            if search_query and not any(search_query.casefold() in str(v).casefold() for v in row):
+                continue
+            calc = calculate_storage_cost(row, current_form_rates=saved_prices)
+            table_data.append({
+                "Redni broj": r_dict.get("redniBroj"),
+                "Datum": r_dict.get("datum"),
+                "Korisnik": r_dict.get("korisnik"),
+                "Telefon": r_dict.get("telefonKorisnika"),
+                "Tablice": r_dict.get("brojTablica"),
+                "Vozilo": f"{r_dict.get('markaVozila')} {r_dict.get('modelVozila')}",
+                "Ukupno RSD": f"{calc['total']:.2f}"
+            })
+        if table_data:
+            st.dataframe(table_data, use_container_width=True)
+        else:
+            st.info("Nema rezultata za zadanu pretragu.")
     else:
-        st.info("Nema dostupnih unosa za štampu.")
+        st.warning("Nema unosa u bazi.")
