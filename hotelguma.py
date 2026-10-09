@@ -8,7 +8,7 @@ import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
 
-# --- DIZAJN I UKLANJANJE SUVIŠNOG PROSTORA NA VRHU ---
+# --- ULTRA KOMPAKTAN DIZAJN (SOCIJALNI RAZMACI ~2mm) ---
 st.set_page_config(
     page_title="UNOS PODATAKA - HOTEL GUMA",
     page_icon="🚗",
@@ -17,32 +17,35 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-/* Uklanjanje velikog praznog prostora na vrhu Streamlit stranice */
+/* Uklanjanje suvišnog vrha i postavljanje minimalnih margina */
 .block-container {
-    padding-top: 1.0rem !important;
-    padding-bottom: 0.5rem;
-    padding-left: 0.8rem;
-    padding-right: 0.8rem;
+    padding-top: 0.2rem !important;
+    padding-bottom: 0.2rem !important;
+    padding-left: 0.4rem !important;
+    padding-right: 0.4rem !important;
 }
 header {
     visibility: hidden;
     height: 0px;
 }
-/* Kontrolisani razmak od 2-3mm između polja */
-div.stTextInput, div.stSelectbox, div.stTextArea {
-    margin-bottom: 3px !important;
+/* Smanjenje vertikalnog razmaka između polja na 2px (~2mm) */
+div.stTextInput, div.stSelectbox, div.stTextArea, div.stCheckbox {
+    margin-bottom: 2px !important;
 }
+/* Smanjenje visine polja i veličine slova unutra */
 input, select, textarea {
-    font-size: 11px !important;
-    padding: 2px 6px !important;
-    min-height: 24px !important;
+    font-size: 10px !important;
+    padding: 1px 4px !important;
+    min-height: 20px !important;
+    height: 20px !important;
 }
 div.stTextInput > div > div > input {
-    height: 26px !important;
+    height: 20px !important;
+    min-height: 20px !important;
 }
 div.stSelectbox > div > div > div {
-    min-height: 26px !important;
-    padding: 0px 4px !important;
+    min-height: 20px !important;
+    padding: 0px 2px !important;
 }
 .stForm {
     border: none;
@@ -50,9 +53,9 @@ div.stSelectbox > div > div > div {
 }
 div.stButton > button {
     font-weight: bold;
-    padding: 0.2rem 0.6rem;
-    font-size: 12px;
-    min-height: 26px;
+    padding: 0.1rem 0.4rem;
+    font-size: 11px;
+    min-height: 22px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -246,7 +249,6 @@ if "edit_row_num" not in st.session_state:
 if "form_data" not in st.session_state:
     st.session_state.form_data = {}
 
-st.markdown("### UNOS PODATAKA - HOTEL GUMA")
 saved_prices = load_prices_from_cloud()
 records = get_saved_records()
 
@@ -301,7 +303,6 @@ with st.form("compact_form"):
 
     with c_cen:
         st.markdown("**Cenovnik čuvanja**")
-        # Prikaz kao u hotel_guma_2.py: Zima / Leto sa po dva polja (Bez f. / Sa f.)
         cc1, cc2 = st.columns(2)
         with cc1:
             st.caption("Bez f.")
@@ -317,11 +318,11 @@ with st.form("compact_form"):
             zima22f = st.text_input("z22f", value=saved_prices.get("zima20do22Felna", "1450"), label_visibility="collapsed")
             zima23f = st.text_input("z23f", value=saved_prices.get("zimaPreko22Felna", "1550"), label_visibility="collapsed")
             leto19f = st.text_input("l19f", value=saved_prices.get("letoDo19Felna", "1650"), label_visibility="collapsed")
-            leto22f = st.text_input("l22f", value=saved_prices.get("leto20do22Felna", "1930"), label_visibility="collapsed")
+            leto22f = st.text_input("l22f", value=saved_prices.get("l20do22Felna", "1930"), label_visibility="collapsed")
             leto23f = st.text_input("l23f", value=saved_prices.get("letoPreko22Felna", "2070"), label_visibility="collapsed")
 
         st.markdown("**Napomena**")
-        napomena_izlaska = st.text_area("Napomena", value=get_val("napomenaIzlaska", ""), label_visibility="collapsed", placeholder="Napomena...", height=42)
+        napomena_izlaska = st.text_area("Napomena", value=get_val("napomenaIzlaska", ""), label_visibility="collapsed", placeholder="Napomena...", height=32)
         
         plac_val = get_val("placeno", "Ne")
         placeno = st.checkbox("Plaćeno", value=True if str(plac_val).casefold() in ["da", "yes", "true", "1"] else False)
