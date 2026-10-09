@@ -8,7 +8,7 @@ import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
 
-# --- MAKSIMALNO KOMPAKTAN LAYOUT ---
+# --- MAKSIMALNO KOMPAKTAN DIZAJN I SMANJENI RAZMACI ---
 st.set_page_config(
     page_title="UNOS PODATAKA - HOTEL GUMA",
     page_icon="🚗",
@@ -18,18 +18,37 @@ st.set_page_config(
 st.markdown("""
 <style>
 .block-container {
-    padding-top: 0.5rem;
-    padding-bottom: 0.5rem;
-    padding-left: 0.8rem;
-    padding-right: 0.8rem;
+    padding-top: 0.4rem;
+    padding-bottom: 0.4rem;
+    padding-left: 0.6rem;
+    padding-right: 0.6rem;
+}
+/* Smanjivanje visine input polja i unutrašnjih margina */
+input, select, textarea {
+    font-size: 11px !important;
+    padding: 2px 6px !important;
+    min-height: 24px !important;
+}
+div.stTextInput > div > div > input {
+    height: 28px !important;
+}
+div.stSelectbox > div > div > div {
+    min-height: 28px !important;
+    padding: 0px 4px !important;
+}
+/* Smanjivanje vertikalnog razmaka između elemenata u formi */
+div.row-widget.stHorizontal {
+    margin-bottom: -10px;
+}
+.stForm {
+    border: none;
+    padding: 0px;
 }
 div.stButton > button {
     font-weight: bold;
-    padding: 0.2rem 0.6rem;
-    font-size: 13px;
-}
-input {
-    font-size: 12px !important;
+    padding: 0.1rem 0.5rem;
+    font-size: 12px;
+    min-height: 26px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -188,66 +207,95 @@ def append_row_to_sheet(row_values):
     ws.update(range_name=f"A{row_num}:{sheet_column_name(len(FIELD_ORDER))}{row_num}", values=[row_values], value_input_option="RAW")
     return row_num
 
-# --- GLAVNI EKRAN ---
+def update_sheet_row(row_num, row_values):
+    ws = ensure_sheet_headers()
+    row_values[FIELD_ORDER.index("id")] = row_num
+    ws.update(range_name=f"A{row_num}:{sheet_column_name(len(FIELD_ORDER))}{row_num}", values=[row_values], value_input_option="RAW")
+
+# --- STANJE SESIJE ZA UREĐIVANJE (EDIT) ---
+if "edit_row_num" not in st.session_state:
+    st.session_state.edit_row_num = None
+if "form_data" not in st.session_state:
+    st.session_state.form_data = {}
+
 st.markdown("### UNOS PODATAKA - HOTEL GUMA")
 saved_prices = load_prices_from_cloud()
 records = get_saved_records()
 
+def get_val(key, default=""):
+    return st.session_state.form_data.get(key, default)
+
 with st.form("compact_form"):
-    c_osn, c_pl, c_pd, c_zl, c_zd, c_cen = st.columns([2.2, 1.9, 1.9, 1.9, 1.9, 2.0], gap="small")
+    c_osn, c_pl, c_pd, c_zl, c_zd, c_cen = st.columns([2.1, 1.9, 1.9, 1.9, 1.9, 2.0], gap="small")
 
     with c_osn:
         st.markdown("**Osnovni podaci**")
-        redni_broj = st.text_input("R.br", value="1", label_visibility="collapsed", placeholder="R.br")
-        datum = st.text_input("Datum", value=datetime.now().strftime("%d.%m.%Y"), label_visibility="collapsed", placeholder="Datum (09.10.2026)")
-        datum_izlaska = st.text_input("Datum izlaska", label_visibility="collapsed", placeholder="Datum izlaska")
-        korisnik = st.text_input("Korisnik", label_visibility="collapsed", placeholder="Ime korisnika")
-        telefon_korisnika = st.text_input("Tel", label_visibility="collapsed", placeholder="Telefon korisnika")
-        adresa_korisnika = st.text_input("Adresa", label_visibility="collapsed", placeholder="Adresa")
-        vlasnik = st.text_input("Vlasnik", label_visibility="collapsed", placeholder="Vlasnik vozila")
-        telefon_vlasnika = st.text_input("Tel vlasnika", label_visibility="collapsed", placeholder="Tel. vlasnika")
-        broj_tablica = st.text_input("Tablice", label_visibility="collapsed", placeholder="Broj tablica")
-        marka_vozila = st.text_input("Marka", label_visibility="collapsed", placeholder="Marka vozila")
-        model_vozila = st.text_input("Model", label_visibility="collapsed", placeholder="Model vozila")
+        redni_broj = st.text_input("R.br", value=get_val("redniBroj", "1"), label_visibility="collapsed", placeholder="R.br")
+        datum = st.text_input("Datum", value=get_val("datum", datetime.now().strftime("%d.%m.%Y")), label_visibility="collapsed", placeholder="Datum")
+        datum_izlaska = st.text_input("Datum izlaska", value=get_val("datumIzlaska", ""), label_visibility="collapsed", placeholder="Datum izlaska")
+        korisnik = st.text_input("Korisnik", value=get_val("korisnik", ""), label_visibility="collapsed", placeholder="Ime korisnika")
+        telefon_korisnika = st.text_input("Tel", value=get_val("telefonKorisnika", ""), label_visibility="collapsed", placeholder="Telefon")
+        adresa_korisnika = st.text_input("Adresa", value=get_val("adresaKorisnika", ""), label_visibility="collapsed", placeholder="Adresa")
+        vlasnik = st.text_input("Vlasnik", value=get_val("vlasnik", ""), label_visibility="collapsed", placeholder="Vlasnik")
+        telefon_vlasnika = st.text_input("Tel vlasnika", value=get_val("telefonVlasnika", ""), label_visibility="collapsed", placeholder="Tel. vlasnika")
+        broj_tablica = st.text_input("Tablice", value=get_val("brojTablica", ""), label_visibility="collapsed", placeholder="Tablice")
+        marka_vozila = st.text_input("Marka", value=get_val("markaVozila", ""), label_visibility="collapsed", placeholder="Marka vozila")
+        model_vozila = st.text_input("Model", value=get_val("modelVozila", ""), label_visibility="collapsed", placeholder="Model vozila")
 
-    def compact_tire_inputs(name):
+    def compact_tire_inputs(name, prefix):
         st.markdown(f"**{name}**")
-        dim = st.text_input(f"Dim {name}", label_visibility="collapsed", placeholder="225/45R17")
-        marka = st.text_input(f"Marka {name}", label_visibility="collapsed", placeholder="Marka gume")
-        model = st.text_input(f"Model {name}", label_visibility="collapsed", placeholder="Model gume")
-        sezona = st.selectbox(f"Sezona {name}", ["", "ZIMSKA", "LETNJA", "ALLSEASON"], label_visibility="collapsed")
-        dot = st.text_input(f"DOT {name}", label_visibility="collapsed", placeholder="DOT")
-        sara = st.text_input(f"Sara {name}", label_visibility="collapsed", placeholder="Šara (mm)")
-        felna = st.checkbox(f"Felna {name}")
-        napomena = st.text_input(f"Nap {name}", label_visibility="collapsed", placeholder="Napomena")
-        return dim, marka, model, sezona, dot, sara, felna, napomena
+        dim = st.text_input(f"Dim {prefix}", value=get_val(f"{prefix}Dimenzija", ""), label_visibility="collapsed", placeholder="225/45R17")
+        marka = st.text_input(f"Marka {prefix}", value=get_val(f"{prefix}Marka", ""), label_visibility="collapsed", placeholder="Marka gume")
+        model = st.text_input(f"Model {prefix}", value=get_val(f"{prefix}Model", ""), label_visibility="collapsed", placeholder="Model gume")
+        
+        sez_val = get_val(f"{prefix}Sezona", "")
+        sez_idx = ["", "ZIMSKA", "LETNJA", "ALLSEASON"].index(sez_val) if sez_val in ["", "ZIMSKA", "LETNJA", "ALLSEASON"] else 0
+        sezona = st.selectbox(f"Sezona {prefix}", ["", "ZIMSKA", "LETNJA", "ALLSEASON"], index=sez_idx, label_visibility="collapsed")
+        
+        dot = st.text_input(f"DOT {prefix}", value=get_val(f"{prefix}DOT", ""), label_visibility="collapsed", placeholder="DOT")
+        sara = st.text_input(f"Sara {prefix}", value=get_val(f"{prefix}DubinaSare", ""), label_visibility="collapsed", placeholder="Šara (mm)")
+        
+        fel_val = get_val(f"{prefix}Felna", "Ne")
+        felna = st.checkbox(f"Felna {prefix}", value=True if str(fel_val).casefold() in ["da", "yes", "true", "1"] else False)
+        
+        napomena = st.text_input(f"Nap {prefix}", value=get_val(f"{prefix}Napomena", ""), label_visibility="collapsed", placeholder="Napomena")
+        lokacija = st.text_input(f"Lok {prefix}", value=get_val(f"{prefix}Lokacija", ""), label_visibility="collapsed", placeholder="Lokacija")
+        return dim, marka, model, sezona, dot, sara, felna, napomena, lokacija
 
     with c_pl:
-        pl_dim, pl_mar, pl_mod, pl_sez, pl_dot, pl_sar, pl_fel, pl_nap = compact_tire_inputs("Prednja leva")
+        pl_dim, pl_mar, pl_mod, pl_sez, pl_dot, pl_sar, pl_fel, pl_nap, pl_lok = compact_tire_inputs("Prednja leva", "prednjaLeva")
     with c_pd:
-        pd_dim, pd_mar, pd_mod, pd_sez, pd_dot, pd_sar, pd_fel, pd_nap = compact_tire_inputs("Prednja desna")
+        pd_dim, pd_mar, pd_mod, pd_sez, pd_dot, pd_sar, pd_fel, pd_nap, pd_lok = compact_tire_inputs("Prednja desna", "prednjaDesna")
     with c_zl:
-        zl_dim, zl_mar, zl_mod, zl_sez, zl_dot, zl_sar, zl_fel, zl_nap = compact_tire_inputs("Zadnja leva")
+        zl_dim, zl_mar, zl_mod, zl_sez, zl_dot, zl_sar, zl_fel, zl_nap, zl_lok = compact_tire_inputs("Zadnja leva", "zadnjaLeva")
     with c_zd:
-        zd_dim, zd_mar, zd_mod, zd_sez, zd_dot, zd_sar, zd_fel, zd_nap = compact_tire_inputs("Zadnja desna")
+        zd_dim, zd_mar, zd_mod, zd_sez, zd_dot, zd_sar, zd_fel, zd_nap, zd_lok = compact_tire_inputs("Zadnja desna", "zadnjaDesna")
 
     with c_cen:
         st.markdown("**Cenovnik**")
-        zima19 = st.text_input("Z19", value=saved_prices.get("zimaDo19", "1000"), label_visibility="collapsed", placeholder="Zima do 19")
-        zima19f = st.text_input("Z19f", value=saved_prices.get("zimaDo19Felna", "1250"), label_visibility="collapsed", placeholder="Zima do 19 (felna)")
-        leto19 = st.text_input("L19", value=saved_prices.get("letoDo19", "1400"), label_visibility="collapsed", placeholder="Leto do 19")
-        leto19f = st.text_input("L19f", value=saved_prices.get("letoDo19Felna", "1650"), label_visibility="collapsed", placeholder="Leto do 19 (felna)")
-        napomena_izlaska = st.text_area("Opšta napomena", label_visibility="collapsed", placeholder="Napomena...", height=68)
-        placeno = st.checkbox("Plaćeno")
+        zima19 = st.text_input("Z19", value=saved_prices.get("zimaDo19", "1000"), label_visibility="collapsed")
+        zima19f = st.text_input("Z19f", value=saved_prices.get("zimaDo19Felna", "1250"), label_visibility="collapsed")
+        leto19 = st.text_input("L19", value=saved_prices.get("letoDo19", "1400"), label_visibility="collapsed")
+        leto19f = st.text_input("L19f", value=saved_prices.get("letoDo19Felna", "1650"), label_visibility="collapsed")
+        
+        napomena_izlaska = st.text_area("Opšta napomena", value=get_val("napomenaIzlaska", ""), label_visibility="collapsed", placeholder="Napomena...", height=48)
+        
+        plac_val = get_val("placeno", "Ne")
+        placeno = st.checkbox("Plaćeno", value=True if str(plac_val).casefold() in ["da", "yes", "true", "1"] else False)
 
     st.markdown("---")
     b1, b2, b3, b4 = st.columns([1, 1, 1.5, 3])
     with b1:
-        submit_btn = st.form_submit_button("Sačuvaj")
+        submit_btn = st.form_submit_button("Sačuvaj izmene" if st.session_state.edit_row_num else "Sačuvaj")
     with b2:
-        clear_btn = st.form_submit_button("Obriši")
+        clear_btn = st.form_submit_button("Nova forma")
     with b4:
         search_query = st.text_input("Pretraga", label_visibility="collapsed", placeholder="Pretraži unose...")
+
+    if clear_btn:
+        st.session_state.edit_row_num = None
+        st.session_state.form_data = {}
+        st.rerun()
 
     if submit_btn:
         row_vals = [""] * len(FIELD_ORDER)
@@ -256,21 +304,29 @@ with st.form("compact_form"):
             "korisnik": korisnik, "telefonKorisnika": telefon_korisnika, "adresaKorisnika": adresa_korisnika,
             "vlasnik": vlasnik, "telefonVlasnika": telefon_vlasnika, "brojTablica": broj_tablica,
             "markaVozila": marka_vozila, "modelVozila": model_vozila, "napomenaIzlaska": napomena_izlaska,
-            "prednjaLevaDimenzija": pl_dim, "prednjaLevaMarka": pl_mar, "prednjaLevaModel": pl_mod, "prednjaLevaSezona": pl_sez, "prednjaLevaDOT": pl_dot, "prednjaLevaFelna": "Da" if pl_fel else "Ne", "prednjaLevaNapomena": pl_nap, "prednjaLevaDubinaSare": pl_sar,
-            "prednjaDesnaDimenzija": pd_dim, "prednjaDesnaMarka": pd_mar, "prednjaDesnaModel": pd_mod, "prednjaDesnaSezona": pd_sez, "prednjaDesnaDOT": pd_dot, "prednjaDesnaFelna": "Da" if pd_fel else "Ne", "prednjaDesnaNapomena": pd_nap, "prednjaDesnaDubinaSare": pd_sar,
-            "zadnjaLevaDimenzija": zl_dim, "zadnjaLevaMarka": zl_mar, "zadnjaLevaModel": zl_mod, "zadnjaLevaSezona": zl_sez, "zadnjaLevaDOT": zl_dot, "zadnjaLevaFelna": "Da" if zl_fel else "Ne", "zadnjaLevaNapomena": zl_nap, "zadnjaLevaDubinaSare": zl_sar,
-            "zadnjaDesnaDimenzija": zd_dim, "zadnjaDesnaMarka": zd_mar, "zadnjaDesnaModel": zd_mod, "zadnjaDesnaSezona": zd_sez, "zadnjaDesnaDOT": zd_dot, "zadnjaDesnaFelna": "Da" if zd_felna else "Ne", "zadnjaDesnaNapomena": zd_nap, "zadnjaDesnaDubinaSare": zd_sar,
+            "prednjaLevaDimenzija": pl_dim, "prednjaLevaMarka": pl_mar, "prednjaLevaModel": pl_mod, "prednjaLevaSezona": pl_sez, "prednjaLevaDOT": pl_dot, "prednjaLevaFelna": "Da" if pl_fel else "Ne", "prednjaLevaNapomena": pl_nap, "prednjaLevaDubinaSare": pl_sar, "prednjaLevaLokacija": pl_lok,
+            "prednjaDesnaDimenzija": pd_dim, "prednjaDesnaMarka": pd_mar, "prednjaDesnaModel": pd_mod, "prednjaDesnaSezona": pd_sez, "prednjaDesnaDOT": pd_dot, "prednjaDesnaFelna": "Da" if pd_fel else "Ne", "prednjaDesnaNapomena": pd_nap, "prednjaDesnaDubinaSare": pd_sar, "prednjaDesnaLokacija": pd_lok,
+            "zadnjaLevaDimenzija": zl_dim, "zadnjaLevaMarka": zl_mar, "zadnjaLevaModel": zl_mod, "zadnjaLevaSezona": zl_sez, "zadnjaLevaDOT": zl_dot, "zadnjaLevaFelna": "Da" if zl_fel else "Ne", "zadnjaLevaNapomena": zl_nap, "zadnjaLevaDubinaSare": zl_sar, "zadnjaLevaLokacija": zl_lok,
+            "zadnjaDesnaDimenzija": zd_dim, "zadnjaDesnaMarka": zd_mar, "zadnjaDesnaModel": zd_mod, "zadnjaDesnaSezona": zd_sez, "zadnjaDesnaDOT": zd_dot, "zadnjaDesnaFelna": "Da" if zd_felna else "Ne", "zadnjaDesnaNapomena": zd_nap, "zadnjaDesnaDubinaSare": zd_sar, "zadnjaDesnaLokacija": zd_lok,
         }
         data_dict.update(saved_prices)
         for i, fn in enumerate(FIELD_ORDER):
             row_vals[i] = data_dict.get(fn, "")
         try:
-            append_row_to_sheet(row_vals)
-            st.success("Sačuvano!")
+            if st.session_state.edit_row_num:
+                update_sheet_row(st.session_state.edit_row_num, row_vals)
+                st.success("Izmene su uspešno sačuvane!")
+            else:
+                append_row_to_sheet(row_vals)
+                st.success("Uspešno sačuvano u Google Sheet!")
+            st.session_state.edit_row_num = None
+            st.session_state.form_data = {}
+            st.rerun()
         except Exception as e:
             st.error(f"Greška: {e}")
 
-st.markdown("### Pregled unosa")
+# --- PREGLED UNOSA SA MOGUĆNOšću UČITAVANJA ZA IZMENU ---
+st.markdown("### Pregled unosa (kliknite na dugme 'Izmeni' za učitavanje u formu)")
 if records:
     t_rows = []
     for r_num, row in records:
@@ -279,13 +335,25 @@ if records:
             continue
         calc = calculate_storage_cost(row, current_form_rates=saved_prices)
         t_rows.append({
+            "Red": r_num,
             "ID": r_dict.get("id"), "R.br": r_dict.get("redniBroj"), "Plaćeno": r_dict.get("placeno"),
             "Prijem": r_dict.get("datum"), "Obračun RSD": f"{calc['total']:.2f}",
             "Korisnik": r_dict.get("korisnik"), "Tablice": r_dict.get("brojTablica"),
             "Vozilo": f"{r_dict.get('markaVozila')} {r_dict.get('modelVozila')}",
             "PL Dim": r_dict.get("prednjaLevaDimenzija"), "PD Dim": r_dict.get("prednjaDesnaDimenzija")
         })
-    st.dataframe(t_rows, use_container_width=True)
+    
+    for item in t_rows:
+        col_info, col_btn = st.columns([10, 1])
+        with col_info:
+            st.text(f"ID: {item['ID']} | R.br: {item['R.br']} | Korisnik: {item['Korisnik']} | Tablice: {item['Tablice']} | Vozilo: {item['Vozilo']} | Plaćeno: {item['Plaćeno']} | Obračun: {item['Obračun RSD']}")
+        with col_btn:
+            if st.button("Izmeni", key=f"edit_{item['Red']}"):
+                # Pronađi originalni red i upisi u session_state
+                target_row = next(r for rn, r in records if rn == item['Red'])
+                st.session_state.edit_row_num = item['Red']
+                st.session_state.form_data = dict(zip(FIELD_ORDER, target_row))
+                st.rerun()
+        st.divider()
 else:
     st.info("Nema sačuvanih unosa.")
-    
